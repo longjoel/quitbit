@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2015, Joel Longanecker
+// Copyright (c) 2015, Joel Longanecker
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
@@ -16,14 +16,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
 // EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-
 // QuitBit
 // Emulator Killer written by Joel Longanecker
 // 2015
 //
 // Usage:
-//		qb.exe --buttons=0+1+2 --exec="c:\emulators\nes\nes.exe" --params="c:\roms\nes\mario.nes"
+//		qb.exe --controller=2 --buttons=0+1+2 --exec="c:\emulators\nes\nes.exe" --params="c:\roms\nes\mario.nes"
 //
 // Example emulation station usage:
 // <system>
@@ -31,147 +29,18 @@
 //		<fullname>Sega Genesis</fullname>
 //		<path>C:\Roms\genesis</path>
 //		<extension>.bin .zip</extension>
-//		<command>qb.exe --buttons=6 --exec=c:\retroarch\retroarch.exe --params=-D -L C:\retroarch\cores\genesis_plus_gx_libretro.dll "%ROM_RAW%"</command>
+//		<command>qb.exe --controller=All --buttons=6 --exec=c:\retroarch\retroarch.exe --params=-D -L C:\retroarch\cores\genesis_plus_gx_libretro.dll "%ROM_RAW%"</command>
 //		<platform>genesis</platform>
 //		<theme>genesis</theme>
 // </system>
 
 using System;
-using System.Windows.Forms;
-
-using System.IO;
 using System.Runtime.InteropServices;
-using System.Diagnostics;
-
-using System.Collections;
 using System.Collections.Generic;
-
 using System.Linq;
-using System.Linq.Expressions;
-
-
 
 namespace QuitBit
 {
-	 public enum DPadEnum : ushort
-    {
-        None = ushort.MaxValue,
-        Up = 0,
-        Down = 18000,
-        Left = 27000,
-        Right = 9000,
-        UpLeft = 31500,
-        UpRight = 4500,
-        DownLeft = 22500,
-        DownRight = 13500
-
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct Joycaps
-    {
-        /// <summary>
-        ///     Manufacturer identifier. Manufacturer identifiers are defined in Manufacturer and Product Identifiers.
-        /// </summary>
-        //[CLSCompliant(false)]
-        public ushort WMid;
-        /// <summary>
-        ///     Product identifier. Product identifiers are defined in Manufacturer and Product Identifiers.
-        /// </summary>
-        //[CLSCompliant(false)]
-        public ushort WPid;
-        /// <summary>
-        ///     Null-terminated string containing the joystick product name.
-        /// </summary>
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-        public String SzPname;
-        /// <summary>
-        ///     Minimum X-coordinate.
-        /// </summary>
-        public Int32 WXmin;
-        /// <summary>
-        ///     Maximum X-coordinate.
-        /// </summary>
-        public Int32 WXmax;
-        /// <summary>
-        /// Minimum Y-coordinate.
-        /// </summary>
-        public Int32 WYmin;
-        /// <summary>
-        ///     Maximum Y-coordinate.
-        /// </summary>
-        public Int32 WYmax;
-        /// <summary>
-        ///     Minimum Z-coordinate.
-        /// </summary>
-        public Int32 WZmin;
-        /// <summary>
-        ///     Maximum Z-coordinate.
-        /// </summary>
-        public Int32 WZmax;
-        /// <summary>
-        ///     Number of joystick buttons.
-        /// </summary>
-        public Int32 WNumButtons;
-        /// <summary>
-        ///     Smallest polling frequency supported when captured by the  function.
-        /// </summary>
-        public Int32 WPeriodMin;
-
-        public Int32 WPeriodMax;
-        /// <summary>
-        ///     Minimum rudder value. The rudder is a fourth axis of movement.
-        /// </summary>
-        public Int32 WRmin;
-        /// <summary>
-        ///     Maximum rudder value. The rudder is a fourth axis of movement.
-        /// </summary>
-        public Int32 WRmax;
-        /// <summary>
-        ///     Minimum u-coordinate (fifth axis) values.
-        /// </summary>
-        public Int32 WUmin;
-        /// <summary>
-        ///     Maximum u-coordinate (fifth axis) values.
-        /// </summary>
-        public Int32 WUmax;
-        /// <summary>
-        ///     Minimum v-coordinate (sixth axis) values.
-        /// </summary>
-        public Int32 WVmin;
-        /// <summary>
-        ///     Maximum v-coordinate (sixth axis) values.
-        /// </summary>
-        public Int32 WVmax;
-        /// <summary>
-        ///     Joystick capabilities The following flags define individual capabilities that a joystick might have:
-        /// </summary>
-
-        public Int32 WCaps;
-        /// <summary>
-        ///     Maximum number of axes supported by the joystick.
-        /// </summary>
-        public Int32 WMaxAxes;
-        /// <summary>
-        ///     Number of axes currently in use by the joystick.
-        /// </summary>
-        public Int32 WNumAxes;
-        /// <summary>
-        ///     Maximum number of buttons supported by the joystick.
-        /// </summary>
-        public Int32 WMaxButtons;
-        /// <summary>
-        ///     Null-terminated string containing the registry key for the joystick.
-        /// </summary>
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-        public String SzRegKey;
-        /// <summary>
-        ///     Null-terminated string identifying the joystick driver OEM.
-        /// </summary>
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-        public String SzOemvxD;
-    }
-
     [StructLayout(LayoutKind.Sequential)]
     public struct JOYINFOEX
     {
@@ -190,173 +59,148 @@ namespace QuitBit
         public int dwReserved2;
     }
 
-    enum JoyError : int
+    internal sealed class Controller
     {
-        JOYERR_BASE = 160,
-        JOYERR_PARMS = (JOYERR_BASE + 5),
-        JOYERR_UNPLUGGED = (JOYERR_BASE + 7),
-        MMSYSERR_BASE = 0,
-        MMSYSERR_BADDEVICEID = (MMSYSERR_BASE + 2),
-        MMSYSERR_INVALPARAM = (MMSYSERR_BASE + 11)
-    }
-	
-	/// <summary>
-	/// Class with program entry point.
-	/// </summary>
-	internal sealed class Program
-	{
-		
-		[DllImport("winmm.dll")]
-        internal static extern int joyGetPosEx(int uJoyID, ref JOYINFOEX pji);
+        [DllImport("winmm.dll")]
+        internal static extern int joyGetPosEx(int uJoyID, ref JOYINFOEX pji); //Get the state of a controller with their ID
+        [DllImport("winmm.dll")]
+        public static extern Int32 joyGetNumDevs(); //How many controllers are plugged in
 
-        [DllImport("winmm.dll")]
-        private static extern Int32 joyGetDevCaps(int uJoyID, ref Joycaps pjc, Int32 cbjc);
-        
-        [DllImport("winmm.dll")]
-        private static extern short joyGetNumDevs();
-		
-        private static List<int> GetButtons()
+        bool specific = false; //Checks all by default
+        private int controllerNum;
+        private HashSet<int> btns = new HashSet<int>();
+        JOYINFOEX state = new JOYINFOEX();
+
+        public Controller(string number)
         {
-        	var btns = new List<int>();
-        	
-        	JOYINFOEX state = new JOYINFOEX();
-                state.dwFlags = 128; // buttons!
-                state.dwSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(JOYINFOEX));
-                joyGetPosEx(0, ref state);
+            if (int.TryParse(number, out controllerNum))
+                specific = true;
+            state.dwFlags = 128;
+            state.dwSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(JOYINFOEX));
+        }
 
-                var bList = new bool[16];
-
-                for (int i = 0; i < 16; i++)
+        public List<int> getButtons() //Finds the buttons pressed at the moment
+        {
+            btns.Clear();
+            if (specific) //Checking one controller
+            {
+                joyGetPosEx(controllerNum, ref state);
+                findPressedButtons();
+            }
+            else //Checking all controllers
+            {
+                for (int i = 0; i < joyGetNumDevs(); i++)
                 {
-                    var mask = (int)Math.Pow(2, i);
+                    joyGetPosEx(i, ref state);
+                    findPressedButtons();
+                }
+            }
 
-                    if ((state.dwButtons & mask) == mask)
-                    	btns.Add(i);
+            return btns.ToList();
+        }
+
+        private void findPressedButtons()
+        {
+            for (int i = 0; i < 16; i++) //16 == Number of Buttons
+            {
+                var mask = (int)Math.Pow(2, i);
+
+                if ((state.dwButtons & mask) == mask)
+                    btns.Add(i);
+            }
+        }
+    }
+
+    internal sealed class Program
+    {
+        [STAThread]
+        private static void Main() //string[] args not utilized
+        {
+            List<int> buttons = new List<int>();
+            string controllerString = "", buttonsString = "", execString = "", paramsString = "";
+
+            var clString = Environment.CommandLine;
+
+            var stringElements = clString.Split(new string[] { "--" }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var s in stringElements)
+            {
+                if (s.Contains("="))
+                {
+                    var lSide = s.Split('=')[0];
+                    var rSide = s.Split('=')[1];
+
+                    if (lSide == "buttons" || lSide == "b")
+                        buttonsString = rSide;
+                    else if (lSide == "exec" || lSide == "e")
+                        execString = rSide;
+                    else if (lSide == "params" || lSide == "p")
+                        paramsString = rSide;
+                    else if (lSide == "contoller" || lSide == "c")
+                        controllerString = rSide;
+                }
+            }
+
+            if (buttonsString == string.Empty || execString == string.Empty) //No buttons or parameters? Pff.
+            {
+                return;
+            }
+
+            Controller controller = new Controller(controllerString); //Controller class that handles button presses when checked
+
+            foreach (var b in buttonsString.Split('+')) //Find Button Combo that is required
+            {
+                int oVal = 0;
+                if (int.TryParse(b, out oVal))
+                {
+                    buttons.Add(oVal);
+                }
+                else
+                {
+                    return;
+                }
+            }
+            buttons.Sort();
+
+            System.Diagnostics.Process runningEmulator = new System.Diagnostics.Process(); //Start up the emulator
+            runningEmulator.StartInfo.FileName = execString;
+            runningEmulator.StartInfo.Arguments = paramsString;
+            runningEmulator.StartInfo.WorkingDirectory = System.IO.Path.GetDirectoryName(execString);
+            runningEmulator.Start();
+
+            bool matched;
+            while (true) //Start Checking for the button combo
+            {
+                System.Threading.Thread.Sleep(75); //Removing this greatly increases CPU usage, 75 is good enough
+
+                matched = true;
+                var pressedButtons = controller.getButtons();
+                pressedButtons.Sort();
+
+                //Console.WriteLine(string.Join(" ", pressedButtons.ToArray())); //For Testing Purposes
+
+                if (pressedButtons.Count() != buttons.Count())
+                    continue;
+
+                for (int i = 0; i < pressedButtons.Count(); i++)
+                {
+                    if (pressedButtons[i] != buttons[i])
+                    {
+                        matched = false;
+                        break;
+                    }
                 }
 
-                return btns;
+                if (matched) //Shutting things down
+                {
+                    try
+                    {
+                        runningEmulator.Kill();
+                    }
+                    catch { }
+                    return;
+                }
+            }
         }
-		
-		
-		/// <summary>
-		/// Program entry point.
-		/// </summary>
-		[STAThread]
-		private static void Main(string[] args)
-		{
-			
-			string buttonsString = "";
-			List<int> buttons = new List<int>();
-			
-			string execString = "";
-			string paramsString = "";
-			
-			Process runningEmulator = null;
-			
-			var clString = Environment.CommandLine;
-			var stringElements = clString.Split(new string[]{"--"}, StringSplitOptions.RemoveEmptyEntries);
-			
-			foreach(var s in stringElements)
-			{
-				if(s.Contains("="))
-				{
-					var lSide = s.Split('=')[0];
-					var rSide = s.Split('=')[1];
-					
-					if(lSide == "buttons") buttonsString = rSide;
-					if(lSide == "exec") execString = rSide;
-					if(lSide == "params") paramsString = rSide;
-					
-				}
-			}
-			
-			// should probably return something more usefull.
-			if(buttonsString == string.Empty || execString == string.Empty || paramsString == string.Empty)
-			{
-				return;
-			}
-			
-			foreach (var b in buttonsString.Split('+')) {
-				int oVal = 0;
-				if(int.TryParse(b, out oVal))
-				{
-					buttons.Add(oVal);
-				}
-				else{
-					return;
-				}
-			}
-			
-			// create new instance of emulator
-			runningEmulator = new Process()
-			{
-				StartInfo = new ProcessStartInfo(execString, paramsString),				
-			};
-			
-			runningEmulator.StartInfo.WorkingDirectory = Path.GetDirectoryName(execString);
-			runningEmulator.StartInfo.UseShellExecute = true;
-			
-			//runningEmulator.StartInfo.UseShellExecute = true;
-			runningEmulator.Start();
-			
-			// wait for emulator to be active
-			while(runningEmulator.Handle == IntPtr.Zero)
-			{
-				System.Threading.Thread.Sleep(100);
-				runningEmulator.Refresh();
-			}
-			
-			
-			var thr = new System.Threading.Thread(()=>{
-				var isRunning = true;
-			    while(isRunning)
-				{
-				//System.Threading.Thread.Sleep(0);
-				//runningEmulator.Refresh();
-				
-				
-				var pressedButtons = GetButtons().ToList();
-				pressedButtons.Sort();
-				
-				var expectedButtons = buttons;
-				expectedButtons.Sort();
-				
-				if(pressedButtons.Count() != expectedButtons.Count())
-				{
-					continue;
-				}
-				
-				var matched = true;
-				for(int i = 0; i < pressedButtons.Count();i++)
-				{
-					if(pressedButtons[i] != expectedButtons[i])
-					{
-						matched = false;
-						break;
-					}
-					
-				}
-
-				if(matched)
-					isRunning = false;				
-			}});
-			
-			thr.Start();
-			thr.Join();
-			
-			
-			//runningEmulator.Refresh();
-			
-				try{
-					runningEmulator.Kill();
-					
-				}
-				catch{}
-			
-			
-			return;
-			
-		}
-		
-	}
+    }
 }
