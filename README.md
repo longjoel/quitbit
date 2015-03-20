@@ -1,6 +1,8 @@
 #QuitBit
 
 * Owner - Joel Longanecker
+* Essential contributors
+* -```https://github.com/MiRIr```
 * 2015
 
 ##About QuitBit
