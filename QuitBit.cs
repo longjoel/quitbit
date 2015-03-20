@@ -21,23 +21,25 @@
 // 2015
 //
 // Usage:
-//		qb.exe --controller=2 --buttons=0+1+2 --exec="c:\emulators\nes\nes.exe" --params="c:\roms\nes\mario.nes"
+//		qb.exe --controller=2 --buttons=2+0+1 --exec=c:\emulators\nes\nes.exe --params=c:\roms\nes\mario.nes
 //
+
 // Example emulation station usage:
 // <system>
 //		<name>genesis</name>
 //		<fullname>Sega Genesis</fullname>
 //		<path>C:\Roms\genesis</path>
 //		<extension>.bin .zip</extension>
-//		<command>qb.exe --controller=All --buttons=6 --exec=c:\retroarch\retroarch.exe --params=-D -L C:\retroarch\cores\genesis_plus_gx_libretro.dll "%ROM_RAW%"</command>
+//		<command>qb.exe --buttons=6 --e=c:\retroarch\retroarch.exe --p=-D -L C:\retroarch\cores\genesis_plus_gx_libretro.dll "%ROM_RAW%"</command>
 //		<platform>genesis</platform>
 //		<theme>genesis</theme>
 // </system>
+//
+// Note: --controller and --params are not necessary
 
 using System;
-using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace QuitBit
 {
@@ -68,46 +70,60 @@ namespace QuitBit
 
         bool specific = false; //Checks all by default
         private int controllerNum;
-        private HashSet<int> btns = new HashSet<int>();
-        JOYINFOEX state = new JOYINFOEX();
+        private string combo;
+        private int condition = 15;
+        private string btnString = "";
+        private JOYINFOEX state = new JOYINFOEX();
 
-        public Controller(string number)
+        public Controller(string n, string c, int con)
         {
-            if (int.TryParse(number, out controllerNum))
+            if (int.TryParse(n, out controllerNum))
                 specific = true;
             state.dwFlags = 128;
             state.dwSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(JOYINFOEX));
+
+            combo = c;
+            if (con > condition)
+                condition = con;
         }
 
-        public List<int> getButtons() //Finds the buttons pressed at the moment
+        public bool comboPressed()
         {
-            btns.Clear();
             if (specific) //Checking one controller
             {
                 joyGetPosEx(controllerNum, ref state);
-                findPressedButtons();
+                return findPressedButtons();
             }
             else //Checking all controllers
             {
                 for (int i = 0; i < joyGetNumDevs(); i++)
                 {
                     joyGetPosEx(i, ref state);
-                    findPressedButtons();
+                    if (findPressedButtons())
+                        return true;
                 }
+                return false;
             }
-
-            return btns.ToList();
         }
 
-        private void findPressedButtons()
+        private bool findPressedButtons()
         {
-            for (int i = 0; i < 16; i++) //16 == Number of Buttons
+            btnString = "";
+
+            for (int i = 0; i <= condition; i++) //
             {
                 var mask = (int)Math.Pow(2, i);
 
                 if ((state.dwButtons & mask) == mask)
-                    btns.Add(i);
+                    btnString += Convert.ToString(i);
             }
+
+            if (combo.Equals(btnString)) //Compares the button presses to combo string
+            {
+                return true;
+            }
+            else
+                return false;
         }
     }
 
@@ -116,91 +132,83 @@ namespace QuitBit
         [STAThread]
         private static void Main() //string[] args not utilized
         {
-            List<int> buttons = new List<int>();
-            string controllerString = "", buttonsString = "", execString = "", paramsString = "";
-
-            var clString = Environment.CommandLine;
-
-            var stringElements = clString.Split(new string[] { "--" }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var s in stringElements)
+            Controller controller;
+            System.Diagnostics.Process runProgram;
             {
-                if (s.Contains("="))
+                string controllerString = "", buttonsString = "", execString = "", paramsString = "";
+                List<int> buttons = new List<int>();
+                var clString = Environment.CommandLine;
+                var stringElements = clString.Split(new string[] { "--" }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var s in stringElements)
                 {
-                    var lSide = s.Split('=')[0];
-                    var rSide = s.Split('=')[1];
-
-                    if (lSide == "buttons" || lSide == "b")
-                        buttonsString = rSide;
-                    else if (lSide == "exec" || lSide == "e")
-                        execString = rSide;
-                    else if (lSide == "params" || lSide == "p")
-                        paramsString = rSide;
-                    else if (lSide == "contoller" || lSide == "c")
-                        controllerString = rSide;
-                }
-            }
-
-            if (buttonsString == string.Empty || execString == string.Empty) //No buttons or parameters? Pff.
-            {
-                return;
-            }
-
-            Controller controller = new Controller(controllerString); //Controller class that handles button presses when checked
-
-            foreach (var b in buttonsString.Split('+')) //Find Button Combo that is required
-            {
-                int oVal = 0;
-                if (int.TryParse(b, out oVal))
-                {
-                    buttons.Add(oVal);
-                }
-                else
-                {
-                    return;
-                }
-            }
-            buttons.Sort();
-
-            System.Diagnostics.Process runningEmulator = new System.Diagnostics.Process(); //Start up the emulator
-            runningEmulator.StartInfo.FileName = execString;
-            runningEmulator.StartInfo.Arguments = paramsString;
-            runningEmulator.StartInfo.WorkingDirectory = System.IO.Path.GetDirectoryName(execString);
-            runningEmulator.Start();
-
-            bool matched;
-            while (true) //Start Checking for the button combo
-            {
-                System.Threading.Thread.Sleep(75); //Removing this greatly increases CPU usage, 75 is good enough
-
-                matched = true;
-                var pressedButtons = controller.getButtons();
-                pressedButtons.Sort();
-
-                //Console.WriteLine(string.Join(" ", pressedButtons.ToArray())); //For Testing Purposes
-
-                if (pressedButtons.Count() != buttons.Count())
-                    continue;
-
-                for (int i = 0; i < pressedButtons.Count(); i++)
-                {
-                    if (pressedButtons[i] != buttons[i])
+                    if (s.Contains("="))
                     {
-                        matched = false;
-                        break;
+                        var lSide = s.Split('=')[0];
+                        var rSide = s.Split('=')[1];
+
+                        if (lSide == "buttons" || lSide == "b")
+                            buttonsString = rSide;
+                        else if (lSide == "exec" || lSide == "e")
+                            execString = rSide;
+                        else if (lSide == "params" || lSide == "p")
+                            paramsString = rSide;
+                        else if (lSide == "contoller" || lSide == "c")
+                            controllerString = rSide;
                     }
                 }
 
-                if (matched) //Shutting things down
+                if (buttonsString == string.Empty || execString == string.Empty) //No buttons or executable? Pff, close the program. Give some help.
                 {
-                    try
-                    {
-                        runningEmulator.Kill();
-                    }
-                    catch { }
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("Command      Alt   Purpose");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.WriteLine("--buttons    --b   Button combination to close the program" + Environment.NewLine +
+                                      "                       --b=0+8+6" + Environment.NewLine + 
+                                      "--exec       --e   Full path to the executable" + Environment.NewLine +
+                                      "                       --e=C:\\Retro Arch\\retroarch.exe" + Environment.NewLine + 
+                                      "--controller --c   ID of specific controller to use           [Optional]" + Environment.NewLine +
+                                      "                       --c=0" + Environment.NewLine + 
+                                      "--params     --p   Parameters when launching the program      [Optional]" + Environment.NewLine + 
+                                      "                       --p=C:\\roms\\NES\\Super Mario Bros..nes" + Environment.NewLine);
+                    Console.ForegroundColor = ConsoleColor.Gray;
                     return;
                 }
+
+                foreach (var b in buttonsString.Split('+')) //Find Button Combo that is required
+                {
+                    int oVal = 0;
+                    if (int.TryParse(b, out oVal))
+                    {
+                        buttons.Add(oVal);
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+                buttons.Sort();
+
+                controller = new Controller(controllerString, string.Join("", buttons.ToArray()), buttons[buttons.Count - 1]); //Controller class that handles button presses when checked
+
+                runProgram = new System.Diagnostics.Process(); //Start up the program
+                runProgram.StartInfo.FileName = execString;
+                runProgram.StartInfo.Arguments = paramsString;
+                runProgram.StartInfo.WorkingDirectory = System.IO.Path.GetDirectoryName(execString);
+                runProgram.Start();
+            } //Wipes all now useless variables, controller and runProgram are all we need now
+
+            while (!controller.comboPressed()) //Start Checking for the button combo
+            {
+                System.Threading.Thread.Sleep(35); //Removing this greatly increases CPU usage, 35 is good enough
             }
+
+            try
+            {
+                runProgram.Kill();
+            }
+            catch { } //Eh, whatever, we tried
+            return;
         }
     }
 }
