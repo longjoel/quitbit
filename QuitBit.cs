@@ -68,77 +68,60 @@ namespace QuitBit
         [DllImport("winmm.dll")]
         public static extern Int32 joyGetNumDevs(); //How many controllers are plugged in
 
-        bool specific = false; //Checks all by default
         private int controllerNum;
-        private string combo;
-        private int condition = 15;
-        private string btnString = "";
+        private int combo;
         private JOYINFOEX state = new JOYINFOEX();
 
-        public Controller(string n, string c, int con)
+        public Controller(int n, int c)
         {
-            if (int.TryParse(n, out controllerNum))
-                specific = true;
+            controllerNum = n;
+            combo = c;
+
             state.dwFlags = 128;
             state.dwSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(JOYINFOEX));
-
-            combo = c;
-            if (con > condition)
-                condition = con;
         }
 
         public bool comboPressed()
         {
-            if (specific) //Checking one controller
+            if (controllerNum > -1) //Checking one controller
             {
                 joyGetPosEx(controllerNum, ref state);
-                return findPressedButtons();
+                return (combo == state.dwButtons);
             }
             else //Checking all controllers
             {
                 for (int i = 0; i < joyGetNumDevs(); i++)
                 {
                     joyGetPosEx(i, ref state);
-                    if (findPressedButtons())
+                    if (combo == state.dwButtons)
                         return true;
                 }
                 return false;
             }
-        }
-
-        private bool findPressedButtons()
-        {
-            btnString = "";
-
-            for (int i = 0; i <= condition; i++) //
-            {
-                var mask = (int)Math.Pow(2, i);
-
-                if ((state.dwButtons & mask) == mask)
-                    btnString += Convert.ToString(i);
-            }
-
-            if (combo.Equals(btnString)) //Compares the button presses to combo string
-            {
-                return true;
-            }
-            else
-                return false;
         }
     }
 
     internal sealed class Program
     {
         [STAThread]
-        private static void Main() //string[] args not utilized
+        private static void Main()
         {
             Controller controller;
             System.Diagnostics.Process runProgram;
+            System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
+            int time;
+
             {
-                string controllerString = "", buttonsString = "", execString = "", paramsString = "";
-                List<int> buttons = new List<int>();
-                var clString = Environment.CommandLine;
-                var stringElements = clString.Split(new string[] { "--" }, StringSplitOptions.RemoveEmptyEntries);
+                string 
+                    controllerString = "-1",
+                    buttonsString = "",
+                    execString = "",
+                    paramsString = "",
+                    timeString = "0",
+                    clString = Environment.CommandLine;
+
+                string[] stringElements = clString.Split(new string[] { "--" }, StringSplitOptions.RemoveEmptyEntries);
+                int buttonCombo = 0, controllerNum = -1;
 
                 foreach (var s in stringElements)
                 {
@@ -153,62 +136,99 @@ namespace QuitBit
                             execString = rSide;
                         else if (lSide == "params" || lSide == "p")
                             paramsString = rSide;
+                        else if (lSide == "time" || lSide == "t")
+                            timeString = rSide;
                         else if (lSide == "contoller" || lSide == "c")
                             controllerString = rSide;
                     }
                 }
 
-                if (buttonsString == string.Empty || execString == string.Empty) //No buttons or executable? Pff, close the program. Give some help.
                 {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Command      Alt   Purpose");
-                    Console.ForegroundColor = ConsoleColor.White;
-                    Console.WriteLine("--buttons    --b   Button combination to close the program" + Environment.NewLine +
-                                      "                       --b=0+8+6" + Environment.NewLine + 
-                                      "--exec       --e   Full path to the executable" + Environment.NewLine +
-                                      "                       --e=C:\\Retro Arch\\retroarch.exe" + Environment.NewLine + 
-                                      "--controller --c   ID of specific controller to use           [Optional]" + Environment.NewLine +
-                                      "                       --c=0" + Environment.NewLine + 
-                                      "--params     --p   Parameters when launching the program      [Optional]" + Environment.NewLine + 
-                                      "                       --p=C:\\roms\\NES\\Super Mario Bros..nes" + Environment.NewLine);
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    return;
-                }
-
-                foreach (var b in buttonsString.Split('+')) //Find Button Combo that is required
-                {
+                    bool error = false;
                     int oVal = 0;
-                    if (int.TryParse(b, out oVal))
+
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    foreach (var b in buttonsString.Split('+')) //Find Button Combo that is required
                     {
-                        buttons.Add(oVal);
+                        if (int.TryParse(b, out oVal))
+                            buttonCombo += (int)Math.Pow(2, oVal);
+                        else
+                        {
+                            if (buttonsString == string.Empty)
+                                Console.WriteLine("A button combination is not specififed.");
+                            else
+                                Console.WriteLine("The button argument is not used properly.");
+                            error = true;
+                            break;
+                        }
                     }
-                    else
+                    if (!System.IO.File.Exists(execString))
                     {
+                        if (execString == string.Empty)
+                            Console.WriteLine("An executable is not specififed.");
+                        else
+                            Console.WriteLine("The executable does not exist, it's possibly an invalid path.");
+                        error = true;
+                    }
+                    if (!int.TryParse(timeString, out time))
+                    {
+                        Console.WriteLine("The time argument not used properly.");
+                        error = true;
+                    }
+                    if (!int.TryParse(controllerString, out controllerNum))
+                    {
+                        Console.WriteLine("The controller argument not used properly.");
+                        error = true;
+                    }
+                    if(error)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("Command      Alt   Purpose");
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.WriteLine("--buttons    --b   Button combination to close the program" + Environment.NewLine +
+                                          "                       --b=0+8+6" + Environment.NewLine +
+                                          "--exec       --e   Full path to the executable" + Environment.NewLine +
+                                          "                       --e=C:\\Emulators\\nestopia.exe" + Environment.NewLine +
+                                          "--controller --c   ID of specific controller to use           [Optional]" + Environment.NewLine +
+                                          "                       --c=0" + Environment.NewLine +
+                                          "--time       --t   Milliseconds to hold down the combination  [Optional]" + Environment.NewLine +
+                                          "                       --t=2500" + Environment.NewLine +
+                                          "--params     --p   Parameters when launching the program      [Optional]" + Environment.NewLine +
+                                          "                       --p=C:\\roms\\NES\\Super Mario Bros..nes");
+                        Console.ForegroundColor = ConsoleColor.Gray;
                         return;
                     }
+                    else
+                        Console.ForegroundColor = ConsoleColor.Gray;
                 }
-                buttons.Sort();
 
-                controller = new Controller(controllerString, string.Join("", buttons.ToArray()), buttons[buttons.Count - 1]); //Controller class that handles button presses when checked
+                controller = new Controller(controllerNum, buttonCombo); //Controller class that handles button presses when checked
 
                 runProgram = new System.Diagnostics.Process(); //Start up the program
                 runProgram.StartInfo.FileName = execString;
                 runProgram.StartInfo.Arguments = paramsString;
                 runProgram.StartInfo.WorkingDirectory = System.IO.Path.GetDirectoryName(execString);
                 runProgram.Start();
-            } //Wipes all now useless variables, controller and runProgram are all we need now
-
-            while (!controller.comboPressed()) //Start Checking for the button combo
-            {
-                System.Threading.Thread.Sleep(35); //Removing this greatly increases CPU usage, 35 is good enough
             }
 
-            try
+            while(true)
             {
-                runProgram.Kill();
+                if (!controller.comboPressed())
+                {
+                    timer.Restart();
+                }
+                else if(timer.ElapsedMilliseconds >= time)
+                {
+                    try
+                    {
+                        runProgram.Kill();
+                    }
+                    catch { }
+                    return;
+                }
+
+                System.Threading.Thread.Sleep(35);
             }
-            catch { } //Eh, whatever, we tried
-            return;
         }
     }
 }
