@@ -26,13 +26,13 @@ A long standing problem with setting up a mouse and keyboard free emulation syst
 
 ##Usage
 
-Command     |Alternative Command|Purpose                                  |Example 
-------------|-------------------|-----------------------------------------|-------
---buttons   |--b                |Button combination to close the program  |--b=0+8+6
---exec      |--e                |Full path to the executable              |--e=C:\Emulators\nes.exe
---controller|--c                |ID of specific controller to use         |--c=0
---time      |--t                |Milliseconds to hold down the combination|--t=2500
---params    |--p                |Parameters when launching the program    |--p=C:\roms\NES\Zelda.nes
+Command     |Short Command|Purpose                                  |Example 
+------------|-------------|-----------------------------------------|-------
+--buttons   |--b          |Button combination to close the program  |--b=0+8+6
+--exec      |--e          |Full path to the executable              |--e=C:\Emulators\nes.exe
+--controller|--c          |ID of specific controller to use         |--c=0
+--time      |--t          |Milliseconds to hold down the combination|--t=2500
+--params    |--p          |Parameters when launching the program    |--p=C:\roms\NES\Zelda.nes
 
 --exec and --buttons are the only arguments that are required. If --controller is not used, it will check every controller plugged into the system.
 
