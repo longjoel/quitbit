@@ -17,10 +17,17 @@ A long standing problem with setting up a mouse and keyboard free emulation syst
 * Navigate to the folder where you downloaded QuitBit.cs
 * Execute the following: C:\Windows\Microsoft.Net\Framework\v4.0.30319\csc.exe /out:QuitBit.exe QuitBit.cs
 
+##Features
+
+* Quits an emulator (or other program).
+* Optional time required for holding the combo down before killing the emulator.
+* Simple integration into different frontends (ICE, Emulation Station, etc).
+
 ##Usage
 
 * Stand alone usage
 ```
+qb.exe --buttons=1+2+4 --exec=c:\emulators\dolphin\dolphin.exe
 qb.exe --controller=2 --buttons=2+0+1 --exec=c:\emulators\nes\nes.exe --params=c:\roms\nes\mario.nes
 ```
 
