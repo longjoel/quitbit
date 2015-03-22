@@ -1,40 +1,50 @@
 #QuitBit
 
-* Owner - Joel Longanecker
-* Essential contributors (https://github.com/MiRIr)
+* Owner- Joel Longanecker
 
-* 2015
+* Essential Contributor- [MiRIr](https://github.com/MiRIr)
+
+2015
 
 ##About QuitBit
 
-QuitBit is a simple piece of software designed to act as an intermediary between a frontend and an emulator.
-A long standing problem with setting up a mouse and keyboard free emulation system is stopping an emulator and returning to the frontend. QuitBit does that, and only that.
+QuitBit is a simple, lightweight piece of software designed to act as an intermediary between a frontend and an emulator.
+A long standing problem with setting up a mouse and keyboard free emulation system is stopping the emulator and returning to the frontend. QuitBit does that, and only that.
 
 ##Getting this software
 
-* Download this file: https://raw.githubusercontent.com/longjoel/quitbit/master/QuitBit.cs
+* Download this File- [QuitBit.cs](https://raw.githubusercontent.com/longjoel/quitbit/master/QuitBit.cs)
 * Open up cmd.exe
 * Navigate to the folder where you downloaded QuitBit.cs
-* Execute the following: C:\Windows\Microsoft.Net\Framework\v4.0.30319\csc.exe /out:QuitBit.exe QuitBit.cs
+* Execute the Following- C:\Windows\Microsoft.Net\Framework\v4.0.30319\csc.exe /out:QuitBit.exe QuitBit.cs
 
 ##Features
 
-* Quits an emulator (or other program).
-* Optional time required for holding the combo down before killing the emulator.
-* Simple integration into different frontends (ICE, Emulation Station, etc).
+* Quits an emulator (or any other program)
+* Simple integration into different frontends (ICE, EmulationStation, etc)
+* Time argument that requires the button combination to be held for any specified amount of time
 
 ##Usage
 
-* Stand alone usage
+Command     |Short Command|Purpose                                  |Example 
+------------|-------------|-----------------------------------------|-------
+--buttons   |--b          |Button combination to close the program  |--b=0+8+6
+--exec      |--e          |Full path to the executable              |--e=C:\Emulators\nes.exe
+--controller|--c          |ID of specific controller to use         |--c=0
+--time      |--t          |Milliseconds to hold down the combination|--t=2500
+--params    |--p          |Parameters when launching the program    |--p=C:\roms\NES\Zelda.nes
+
+--exec and --buttons are the only arguments that are required. If --controller is not used, it will check every controller plugged into the system.
+
+* Standalone Usage Example
 ```
-qb.exe --buttons=1+2+4 --exec=c:\emulators\dolphin\dolphin.exe
-qb.exe --controller=2 --buttons=2+0+1 --exec=c:\emulators\nes\nes.exe --params=c:\roms\nes\mario.nes
+qb.exe --buttons=1+2+4 --exec=c:\emulators\dolphin\dolphin.exe --t=2000
+qb.exe --c=2 --b=2+0+1 --exec=C:\Emulator Programs\NES\nestopia.exe --params=C:\Roms\Nintendo\Metroid.nes
 ```
 
-* Example usage for emulation station
+* EmulationStation Usage Example
 
 ```
-Example emulation station usage:
 <systemList>
     <system>
          <name>genesis</name>
