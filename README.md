@@ -16,7 +16,7 @@ A long standing problem with setting up a mouse and keyboard free emulation syst
 * Download this File- [QuitBit.cs](https://raw.githubusercontent.com/longjoel/quitbit/master/QuitBit.cs)
 * Open up cmd.exe
 * Navigate to the folder where you downloaded QuitBit.cs
-* Execute the following: C:\Windows\Microsoft.Net\Framework\v4.0.30319\csc.exe /out:QuitBit.exe QuitBit.cs
+* Execute the Following- C:\Windows\Microsoft.Net\Framework\v4.0.30319\csc.exe /out:QuitBit.exe QuitBit.cs
 
 ##Features
 
