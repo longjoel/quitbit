@@ -4,7 +4,10 @@
 
 * Essential Contributor- [MiRIr](https://github.com/MiRIr)
 
-2015
+2016
+
+##Changelog:
+2016-02-16 - Added restore resolution flag. Some emulators do not play nice with big picture mode, and this is an attempt to fix this.
 
 ##About QuitBit
 
@@ -33,8 +36,10 @@ Command     |Short Command|Purpose                                  |Example
 --controller|--c          |ID of specific controller to use         |--c=0
 --time      |--t          |Milliseconds to hold down the combination|--t=2500
 --params    |--p          |Parameters when launching the program    |--p=C:\roms\NES\Zelda.nes
+--rr        |--rr         |Restore Resolution                       |
 
 --exec and --buttons are the only arguments that are required. If --controller is not used, it will check every controller plugged into the system.
+
 
 * Standalone Usage Example
 ```
